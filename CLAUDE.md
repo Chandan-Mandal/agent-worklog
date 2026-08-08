@@ -3,14 +3,15 @@
 Local agent that logs daily work to a Google Sheet and (soon) posts standups to Slack/Geekbot.
 
 ## Architecture
-- `worklog/cli.py` — argparse CLI: `setup`, `log`, `status`
+- `worklog/cli.py` — argparse CLI: `setup`, `log`, `template`, `add-next-week`, `add-next-month`, `sort`, `status`
 - `worklog/setup_flow.py` — interactive setup wizard (Google required, Slack/Jira optional)
-- `worklog/sheets.py` — gspread integration; creates the formatted base tracker, appends entries
+- `worklog/sheets.py` — gspread client helpers
+- `worklog/template.py` — month/week template engine: month tabs, week blocks, insert/sort/add-next-week/month
 - `worklog/config.py` — config at `~/.worklog/config.json`
 
 ## Conventions
-- Sheet layout: scorecard in row 1, headers in row 3 (`HEADER_ROW`), data from row 4
-- Columns: Date, Task, Priority, Workplace, Time Range, Total Hours, Assigned On, Notes
+- Sheet layout: one tab per month ("AUG 2026"); week blocks with label row, header row, data rows
+- Columns: DATE, DAY, TASK_TAG, SUBTASK, PRIORITY, TIMELOG, TIMESPENT, ASSIGNED_AT, ASSIGNED_BY
 - Never commit credentials; `.gitignore` blocks `*.json`
 
 ## When the user asks to log work

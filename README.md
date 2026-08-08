@@ -56,9 +56,21 @@ To use an **existing** sheet, share it with the service account's email (Editor)
 ## Usage
 
 ```bash
-# Log an entry
-worklog log --task "Reviewed schema design PR" --hours 1.5 \
-    --priority High --workplace Office --time "11AM - 12:30PM"
+# Log an entry — lands in the right month tab and week block automatically
+worklog log --task "Reviewed schema design PR" --tag data-platform \
+    --hours 1.5 --priority High --timelog "11AM - 12:30PM" \
+    --assigned-by CTO --assigned-at 2026-08-05
+
+# Create month tabs (defaults: current month through December)
+worklog template --from 2026-08 --to 2026-12
+
+# Grow the sheet over time
+worklog add-next-week     # append the next week block to the latest month
+worklog add-next-month    # create next month's tab, archive (hide) the previous
+
+# Sorting (persisted as your default)
+worklog sort              # ascending by date within each week block
+worklog sort --desc
 
 # Check configuration
 worklog status
@@ -66,12 +78,23 @@ worklog status
 
 ## Sheet structure
 
-| Date | Task | Priority | Workplace | Time Range | Total Hours | Assigned On | Notes |
-|------|------|----------|-----------|------------|-------------|-------------|-------|
+One tab per month (`AUG 2026`, `SEP 2026`, ...). Each tab:
 
-- **Total Hours Logged** scorecard at the top auto-sums the Total Hours column
-- **Priority**: High / Medium / Low (dropdown)
-- **Workplace**: Home / Office / Sick / Casual (dropdown)
+```
+MONTH - AUG,2026                                TOTAL HRS  <auto-sum>
+
+WEEK 1 (1-2)
+DATE | DAY | TASK_TAG | SUBTASK | PRIORITY | TIMELOG | TIMESPENT | ASSIGNED_AT | ASSIGNED_BY
+...
+
+WEEK 2 (3-9)
+...
+```
+
+- Weeks are Monday–Sunday, clipped to the month
+- `worklog log` finds the right week block by date, fills the first empty row, and keeps the block sorted
+- **Priority**: High / Medium / Low (dropdown); month total hours auto-sums in the title row
+- When a month changes, `add-next-month` archives the previous tab (hidden, data preserved)
 
 ## Using with Claude Code (or any AI CLI)
 

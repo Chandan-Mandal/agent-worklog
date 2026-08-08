@@ -107,12 +107,15 @@ def _setup_google(config: dict) -> None:
             except Exception as e:  # noqa: BLE001
                 print(f"  Could not open the sheet ({e}).\n  Check that it is shared with {sa_email} and try again.")
 
-        if _ask_yes_no(f"Initialize a formatted '{sheets.TAB_NAME}' tracker tab in it?", default=True):
-            print("  Setting up scorecard, headers, dropdowns, and formatting...")
-            google["tab"] = sheets.init_tracker_tab(spreadsheet)
-            print(f"  Done! Tab '{google['tab']}' is ready.")
-        else:
-            google["tab"] = _ask("Which tab (worksheet) should entries go to?", sheets.TAB_NAME)
+        if _ask_yes_no("Initialize month/week tracker tabs (current month through December)?", default=True):
+            from datetime import date
+
+            from . import template
+
+            today = date.today()
+            print("  Building month tabs with week blocks, headers, and dropdowns...")
+            created = template.build_range(spreadsheet, (today.year, today.month), (today.year, 12))
+            print(f"  Done! Created: {', '.join(created) if created else '(tabs already existed)'}")
 
 
 def _extract_sheet_id(value: str) -> str:
@@ -150,4 +153,4 @@ def _print_summary(config: dict) -> None:
     print(f"  Slack: {'configured' if config.get('slack', {}).get('webhook_url') else 'skipped'}")
     print(f"  Jira:  {'configured' if config.get('jira', {}).get('base_url') else 'skipped'}")
     print("\nTry it:")
-    print('  worklog log --task "Built the worklog agent" --hours 2 --priority High --workplace Home --time "11AM - 1PM"')
+    print('  worklog log --task "Built the worklog agent" --tag agent-worklog --hours 2 --priority High --timelog "11AM - 1PM"')

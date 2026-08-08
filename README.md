@@ -88,7 +88,7 @@ Everything lives in **one tab** (`Worklog`) — month sections stacked verticall
 MONTH - AUG,2026                                TOTAL HRS  <auto-sum>
 
 WEEK 1 (1-2)
-DATE | DAY | TASK_TAG | SUBTASK | PRIORITY | WORKPLACE | TIMELOG | TIMESPENT | ASSIGNED_AT | ASSIGNED_BY | NOTES
+DATE | DAY | TASK_TAG | SUBTASK | TYPE | PRIORITY | WORKPLACE | TIMELOG | TIMESPENT | ASSIGNED_AT | ASSIGNED_BY | NOTES
 ...
 
 WEEK 2 (3-9)

@@ -23,6 +23,7 @@ def main() -> None:
     log_p = sub.add_parser("log", help="Log a work entry into the right month/week block")
     log_p.add_argument("--task", required=True, help="What you worked on (SUBTASK)")
     log_p.add_argument("--tag", default="", help="TASK_TAG, e.g. project or epic name")
+    log_p.add_argument("--type", dest="work_type", choices=["DEV", "DELIVERY", "OPS", "AD-HOC", "MEETING", "LEARNING"], default="", help="Kind of work")
     log_p.add_argument("--priority", choices=["High", "Medium", "Low"], default="")
     log_p.add_argument("--workplace", choices=["Home", "Office", "Leave"], default="")
     log_p.add_argument("--timelog", default="", help='Time range, e.g. "1PM - 2PM". Logging the same task+date again appends to it')
@@ -80,6 +81,7 @@ def main() -> None:
             entry_date,
             task_tag=args.tag,
             subtask=args.task,
+            work_type=args.work_type,
             priority=args.priority,
             workplace=args.workplace,
             timelog=args.timelog,
@@ -99,6 +101,7 @@ def main() -> None:
             entry_date,
             task_tag="adhoc",
             subtask="Ad-hoc",
+            work_type="AD-HOC",
             priority="Low",
             workplace=args.workplace,
             timespent=hours,

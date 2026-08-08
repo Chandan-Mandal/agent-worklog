@@ -33,6 +33,7 @@ HEADERS = [
     "DAY",
     "TASK_TAG",
     "SUBTASK",
+    "TYPE",
     "PRIORITY",
     "WORKPLACE",
     "TIMELOG",
@@ -42,16 +43,18 @@ HEADERS = [
     "NOTES",
 ]
 N_COLS = len(HEADERS)
-LAST_COL = "K"
+LAST_COL = "L"
 ROWS_PER_WEEK = 8
 PRIORITY_OPTIONS = ["High", "Medium", "Low"]
 WORKPLACE_OPTIONS = ["Home", "Office", "Leave"]
+TYPE_OPTIONS = ["DEV", "DELIVERY", "OPS", "AD-HOC", "MEETING", "LEARNING"]
 
 (
     COL_DATE,
     COL_DAY,
     COL_TAG,
     COL_SUBTASK,
+    COL_TYPE,
     COL_PRIORITY,
     COL_WORKPLACE,
     COL_TIMELOG,
@@ -129,7 +132,8 @@ def get_tracker_ws(spreadsheet: gspread.Spreadsheet) -> gspread.Worksheet:
 def day_color_requests(sheet_id: int) -> list:
     """Conditional formatting: rows colored by day of week (DAY col), weekends
     grey, leave days yellow. Rule order matters — first match wins."""
-    rules = [('=$F1="Leave"', LEAVE_COLOR), ('=OR($B1="Sat",$B1="Sun")', WEEKEND_COLOR)]
+    wp = chr(ord("A") + COL_WORKPLACE)
+    rules = [(f'=${wp}1="Leave"', LEAVE_COLOR), ('=OR($B1="Sat",$B1="Sun")', WEEKEND_COLOR)]
     rules += [(f'=$B1="{day}"', color) for day, color in DAY_COLORS.items()]
     return [
         {
@@ -235,7 +239,7 @@ def append_month_section(spreadsheet: gspread.Spreadsheet, year: int, month: int
 
     nxt = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
     total_formula = (
-        f'=SUMIFS(H:H,A:A,">="&DATE({year},{month},1),A:A,"<"&DATE({nxt.year},{nxt.month},1))'
+        f'=SUMIFS(I:I,A:A,">="&DATE({year},{month},1),A:A,"<"&DATE({nxt.year},{nxt.month},1))'
     )
     grid = [
         [month_label(year, month)] + [""] * (N_COLS - 3) + ["TOTAL HRS", total_formula],
@@ -316,6 +320,7 @@ def _column_requests(sheet_id: int) -> list:
         width(COL_DAY, 60),
         width(COL_TAG, 130),
         width(COL_SUBTASK, 320),
+        width(COL_TYPE, 110),
         width(COL_PRIORITY, 95),
         width(COL_WORKPLACE, 100),
         width(COL_TIMELOG, 170),
@@ -352,6 +357,7 @@ def _block_format_requests(sheet_id: int, label_row: int, n_data_rows: int) -> l
                 "fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)",
             }
         },
+        _dropdown_request(sheet_id, data_start, data_end, COL_TYPE, TYPE_OPTIONS),
         _dropdown_request(sheet_id, data_start, data_end, COL_PRIORITY, PRIORITY_OPTIONS),
         _dropdown_request(sheet_id, data_start, data_end, COL_WORKPLACE, WORKPLACE_OPTIONS),
     ]
@@ -377,6 +383,7 @@ def insert_entry(
     entry_date: date,
     task_tag: str = "",
     subtask: str = "",
+    work_type: str = "",
     priority: str = "",
     workplace: str = "",
     timelog: str = "",
@@ -418,8 +425,8 @@ def insert_entry(
                     prev = 0.0
                 merged[COL_TIMESPENT] = prev + timespent
             for col, value in [
-                (COL_TAG, task_tag), (COL_PRIORITY, priority), (COL_WORKPLACE, workplace),
-                (COL_ASSIGNED_AT, assigned_at), (COL_ASSIGNED_BY, assigned_by),
+                (COL_TAG, task_tag), (COL_TYPE, work_type), (COL_PRIORITY, priority),
+                (COL_WORKPLACE, workplace), (COL_ASSIGNED_AT, assigned_at), (COL_ASSIGNED_BY, assigned_by),
             ]:
                 if value and not str(merged[col]).strip():
                     merged[col] = value
@@ -450,6 +457,7 @@ def insert_entry(
         entry_date.strftime("%a"),
         task_tag,
         subtask,
+        work_type,
         priority,
         workplace,
         timelog,

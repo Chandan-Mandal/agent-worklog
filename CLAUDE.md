@@ -11,7 +11,7 @@ Local agent that logs daily work to a Google Sheet and (soon) posts standups to 
 
 ## Conventions
 - Sheet layout: single "Worklog" tab; month sections ("MONTH - AUG,2026") stacked vertically, each with week blocks (label row, header row, data rows); archive = move section to "Archive" tab
-- Columns: DATE, DAY, TASK_TAG, SUBTASK, PRIORITY, WORKPLACE, TIMELOG, TIMESPENT, ASSIGNED_AT, ASSIGNED_BY, NOTES
+- Columns: DATE, DAY, TASK_TAG, SUBTASK, TYPE (DEV/DELIVERY/OPS/AD-HOC/MEETING/LEARNING), PRIORITY, WORKPLACE, TIMELOG, TIMESPENT, ASSIGNED_AT, ASSIGNED_BY, NOTES
 - Same date+subtask logged again merges: TIMELOG appended, hours summed
 - TIMESPENT is a per-day total carried on the first row of each day group (_regroup_block); other rows of the day are blank
 - Never commit credentials; `.gitignore` blocks `*.json`

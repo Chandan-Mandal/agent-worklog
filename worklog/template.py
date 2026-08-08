@@ -259,8 +259,10 @@ def append_month_section(spreadsheet: gspread.Spreadsheet, year: int, month: int
     ws.update(values=grid, range_name=f"A{start}:{LAST_COL}{end}", value_input_option="USER_ENTERED")
 
     requests = [_month_title_format_request(ws.id, start - 1)]
-    for offset in label_offsets:
-        requests.extend(_block_format_requests(ws.id, start - 1 + offset, ROWS_PER_WEEK))
+    for week, offset in enumerate(label_offsets, 1):
+        label_row = start - 1 + offset  # 0-based
+        requests.extend(_block_format_requests(ws.id, label_row, ROWS_PER_WEEK))
+        requests.append(_table_request(ws.id, table_name(year, month, week), label_row + 1, label_row + 2 + ROWS_PER_WEEK))
     spreadsheet.batch_update({"requests": requests})
     return month_title(year, month)
 
@@ -372,6 +374,32 @@ def _dropdown_request(sheet_id: int, start_row: int, end_row: int, col: int, opt
                 "showCustomUi": True,
                 "strict": True,
             },
+        }
+    }
+
+
+def table_name(year: int, month: int, week: int) -> str:
+    return f"{calendar.month_abbr[month].upper()}{year}_W{week}"
+
+
+def _table_request(sheet_id: int, name: str, header_row: int, data_end: int) -> dict:
+    """Turn a week block into a Sheets Table (per-column filter chips).
+
+    header_row is the 0-based row of the DATE..NOTES header; data_end is the
+    0-based exclusive end row of the block's data.
+    """
+    return {
+        "addTable": {
+            "table": {
+                "name": name,
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": header_row,
+                    "endRowIndex": data_end,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": N_COLS,
+                },
+            }
         }
     }
 
@@ -567,7 +595,9 @@ def add_next_week(spreadsheet: gspread.Spreadsheet) -> str:
     if end > ws.row_count:
         ws.add_rows(end - ws.row_count + 20)
     ws.update(values=grid, range_name=f"A{start}:{LAST_COL}{end}")
-    spreadsheet.batch_update({"requests": _block_format_requests(ws.id, start - 1, ROWS_PER_WEEK)})
+    requests = _block_format_requests(ws.id, start - 1, ROWS_PER_WEEK)
+    requests.append(_table_request(ws.id, table_name(section["year"], section["month"], i), start, start + 1 + ROWS_PER_WEEK))
+    spreadsheet.batch_update({"requests": requests})
     return f"Added WEEK {i} ({a}-{b}) to '{month_title(section['year'], section['month'])}'"
 
 

@@ -130,11 +130,22 @@ def get_tracker_ws(spreadsheet: gspread.Spreadsheet) -> gspread.Worksheet:
 
 
 def day_color_requests(sheet_id: int) -> list:
-    """Conditional formatting: rows colored by day of week (DAY col), weekends
-    grey, leave days yellow. Rule order matters — first match wins."""
+    """Conditional formatting: rows colored by day of week, weekends grey,
+    leave days yellow. Rule order matters — first match wins.
+
+    DATE/DAY/WORKPLACE are blanked on repeat rows of a day group, so the
+    formulas look up the nearest non-blank value above; $D<>"" (SUBTASK)
+    limits coloring to rows that hold actual entries."""
+    day_col = chr(ord("A") + COL_DAY)
     wp = chr(ord("A") + COL_WORKPLACE)
-    rules = [(f'=${wp}1="Leave"', LEAVE_COLOR), ('=OR($B1="Sat",$B1="Sun")', WEEKEND_COLOR)]
-    rules += [(f'=$B1="{day}"', color) for day, color in DAY_COLORS.items()]
+    task = chr(ord("A") + COL_SUBTASK)
+    eff_day = f'IFERROR(LOOKUP(2,1/(${day_col}$1:${day_col}1<>""),${day_col}$1:${day_col}1),"")'
+    eff_wp = f'IFERROR(LOOKUP(2,1/(${wp}$1:${wp}1<>""),${wp}$1:${wp}1),"")'
+    rules = [
+        (f'=AND(${task}1<>"", {eff_wp}="Leave")', LEAVE_COLOR),
+        (f'=AND(${task}1<>"", OR({eff_day}="Sat",{eff_day}="Sun"))', WEEKEND_COLOR),
+    ]
+    rules += [(f'=AND(${task}1<>"", {eff_day}="{day}")', color) for day, color in DAY_COLORS.items()]
     return [
         {
             "addConditionalFormatRule": {
@@ -438,6 +449,9 @@ def insert_entry(
     if block is None:
         raise SystemExit(f"No week block covers day {entry_date.day} in section '{month_title(entry_date.year, entry_date.month)}'.")
 
+    # Restore grouped fields (DATE/DAY/WORKPLACE) so matching and sorting see full rows
+    _ungroup_block(ws, block, all_values)
+
     # Merge into an existing row for the same date + subtask (multi-session work)
     if subtask:
         existing = _find_entry_row(all_values, block, entry_date, subtask)
@@ -445,7 +459,9 @@ def insert_entry(
             row, current = existing
             merged = list(current) + [""] * (N_COLS - len(current))
             if timelog:
-                merged[COL_TIMELOG] = f"{merged[COL_TIMELOG]}, {timelog}" if merged[COL_TIMELOG].strip() else timelog
+                existing_logs = [t.strip() for t in merged[COL_TIMELOG].split(",") if t.strip()]
+                if timelog.strip() not in existing_logs:
+                    merged[COL_TIMELOG] = f"{merged[COL_TIMELOG]}, {timelog}" if merged[COL_TIMELOG].strip() else timelog
             if timespent is not None:
                 try:
                     prev = float(merged[COL_TIMESPENT]) if merged[COL_TIMESPENT].strip() else 0.0
@@ -503,7 +519,7 @@ def insert_entry(
 def sort_blocks(spreadsheet: gspread.Spreadsheet, month: str = None, ascending: bool = True) -> int:
     """Sort week blocks by DATE. month like 'AUG 2026' limits to one section."""
     ws = get_tracker_ws(spreadsheet)
-    sections, _ = parse_sections(ws)
+    sections, all_values = parse_sections(ws)
     if month:
         parsed = parse_month_title(month)
         if not parsed:
@@ -512,23 +528,62 @@ def sort_blocks(spreadsheet: gspread.Spreadsheet, month: str = None, ascending: 
     n = 0
     for section in sections:
         for block in section["blocks"]:
+            _ungroup_block(ws, block, all_values)
             _sort_block(spreadsheet, ws, block, ascending)
             _regroup_block(ws, block)
             n += 1
     return n
 
 
-def _regroup_block(ws: gspread.Worksheet, block: dict) -> None:
-    """Group TIMESPENT by day: the first row of each day carries the day's
-    total hours; the other rows of that day are left blank. Assumes the block
-    is already sorted so same-date rows are adjacent."""
-    rng = f"A{block['data_start']}:{LAST_COL}{block['data_end']}"
-    data = ws.get(rng) or []
+def _block_rows(ws: gspread.Worksheet, block: dict) -> list:
+    """Fetch the block's data rows, padded to full width/height."""
+    data = ws.get(f"A{block['data_start']}:{LAST_COL}{block['data_end']}") or []
     rows = [list(r) + [""] * (N_COLS - len(r)) for r in data]
     n = block["data_end"] - block["data_start"] + 1
     rows += [[""] * N_COLS for _ in range(n - len(rows))]
+    return rows
 
-    new_hours = [""] * n
+
+def _write_block(ws: gspread.Worksheet, block: dict, rows: list) -> None:
+    ws.update(
+        values=rows,
+        range_name=f"A{block['data_start']}:{LAST_COL}{block['data_end']}",
+        value_input_option="USER_ENTERED",
+    )
+
+
+def _ungroup_block(ws: gspread.Worksheet, block: dict, all_values: list) -> None:
+    """Fill DATE/DAY/WORKPLACE down over repeat rows so sorting and matching
+    work on complete data. Patches all_values in place."""
+    current = None
+    changed = False
+    rows = []
+    for r in range(block["data_start"], block["data_end"] + 1):
+        row = list(all_values[r - 1]) if r <= len(all_values) else []
+        row += [""] * (N_COLS - len(row))
+        if row[COL_DATE].strip():
+            current = row
+        elif current and any(str(c).strip() for c in row):
+            row[COL_DATE] = current[COL_DATE]
+            row[COL_DAY] = current[COL_DAY]
+            if not row[COL_WORKPLACE].strip():
+                row[COL_WORKPLACE] = current[COL_WORKPLACE]
+            changed = True
+        rows.append(row)
+        if r <= len(all_values):
+            all_values[r - 1] = row
+        else:
+            all_values.extend([[]] * (r - len(all_values) - 1) + [row])
+    if changed:
+        _write_block(ws, block, rows)
+
+
+def _regroup_block(ws: gspread.Worksheet, block: dict) -> None:
+    """Group rows by day: the first row of each day carries DATE, DAY,
+    WORKPLACE and the day's total hours; repeat rows of the same day are left
+    blank in those columns. Assumes the block is sorted (same dates adjacent)."""
+    rows = _block_rows(ws, block)
+    n = len(rows)
     i = 0
     while i < n:
         day = rows[i][COL_DATE].strip()
@@ -544,17 +599,16 @@ def _regroup_block(ws: gspread.Worksheet, block: dict) -> None:
                     total += float(value)
                 except ValueError:
                     pass
+            if j > i:  # repeat row of the same day — blank grouped fields
+                rows[j][COL_DATE] = ""
+                rows[j][COL_DAY] = ""
+                rows[j][COL_WORKPLACE] = ""
+                rows[j][COL_TIMESPENT] = ""
             j += 1
-        if total:
-            new_hours[i] = total
+        rows[i][COL_TIMESPENT] = total if total else ""
         i = j
 
-    col = chr(ord("A") + COL_TIMESPENT)
-    ws.update(
-        values=[[h] for h in new_hours],
-        range_name=f"{col}{block['data_start']}:{col}{block['data_end']}",
-        value_input_option="USER_ENTERED",
-    )
+    _write_block(ws, block, rows)
 
 
 def _sort_block(spreadsheet: gspread.Spreadsheet, ws: gspread.Worksheet, block: dict, ascending: bool) -> None:

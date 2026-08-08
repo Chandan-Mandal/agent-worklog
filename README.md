@@ -98,6 +98,7 @@ MONTH - SEP,2026
 - `worklog log` finds the right month section + week block by date, fills the first empty row, and keeps the block sorted
 - **Priority**: High / Medium / Low; **Workplace**: Home / Office / Leave (dropdowns); each month's TOTAL HRS auto-sums that month's entries
 - Logging the same task twice on one day merges TIMELOG ("1PM - 2PM, 5PM - 7PM") and adds up hours
+- **TIMESPENT is grouped per day**: the first row of each day shows the day's total hours; other rows of that day stay blank (so nothing double-counts)
 - When a month changes, `add-next-month` moves the previous month's section to an `Archive` tab (values + formatting preserved)
 
 ## Using with Claude Code (or any AI CLI)

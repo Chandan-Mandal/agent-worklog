@@ -426,6 +426,7 @@ def insert_entry(
             if notes:
                 merged[COL_NOTES] = f"{merged[COL_NOTES]}; {notes}" if str(merged[COL_NOTES]).strip() else notes
             ws.update(values=[merged[:N_COLS]], range_name=f"A{row}:{LAST_COL}{row}", value_input_option="USER_ENTERED")
+            _regroup_block(ws, block)
             return month_title(entry_date.year, entry_date.month)
 
     row = next(
@@ -459,6 +460,7 @@ def insert_entry(
     ]]
     ws.update(values=values, range_name=f"A{row}:{LAST_COL}{row}", value_input_option="USER_ENTERED")
     _sort_block(spreadsheet, ws, block, ascending)
+    _regroup_block(ws, block)
     return month_title(entry_date.year, entry_date.month)
 
 
@@ -475,8 +477,48 @@ def sort_blocks(spreadsheet: gspread.Spreadsheet, month: str = None, ascending: 
     for section in sections:
         for block in section["blocks"]:
             _sort_block(spreadsheet, ws, block, ascending)
+            _regroup_block(ws, block)
             n += 1
     return n
+
+
+def _regroup_block(ws: gspread.Worksheet, block: dict) -> None:
+    """Group TIMESPENT by day: the first row of each day carries the day's
+    total hours; the other rows of that day are left blank. Assumes the block
+    is already sorted so same-date rows are adjacent."""
+    rng = f"A{block['data_start']}:{LAST_COL}{block['data_end']}"
+    data = ws.get(rng) or []
+    rows = [list(r) + [""] * (N_COLS - len(r)) for r in data]
+    n = block["data_end"] - block["data_start"] + 1
+    rows += [[""] * N_COLS for _ in range(n - len(rows))]
+
+    new_hours = [""] * n
+    i = 0
+    while i < n:
+        day = rows[i][COL_DATE].strip()
+        if not day:
+            i += 1
+            continue
+        j = i
+        total = 0.0
+        while j < n and rows[j][COL_DATE].strip() == day:
+            value = str(rows[j][COL_TIMESPENT]).strip()
+            if value:
+                try:
+                    total += float(value)
+                except ValueError:
+                    pass
+            j += 1
+        if total:
+            new_hours[i] = total
+        i = j
+
+    col = chr(ord("A") + COL_TIMESPENT)
+    ws.update(
+        values=[[h] for h in new_hours],
+        range_name=f"{col}{block['data_start']}:{col}{block['data_end']}",
+        value_input_option="USER_ENTERED",
+    )
 
 
 def _sort_block(spreadsheet: gspread.Spreadsheet, ws: gspread.Worksheet, block: dict, ascending: bool) -> None:

@@ -32,6 +32,12 @@ def main() -> None:
     log_p.add_argument("--assigned-by", default="", help="Who assigned it")
     log_p.add_argument("--notes", default="")
 
+    adhoc_p = sub.add_parser("adhoc", help="Log a small ad-hoc item into the day's single Ad-hoc roll-up row")
+    adhoc_p.add_argument("text", help='What you did, e.g. "sent mail to xyz"')
+    adhoc_p.add_argument("--mins", type=int, default=15, help="Rough minutes spent (default: 15)")
+    adhoc_p.add_argument("--workplace", choices=["Home", "Office", "Leave"], default="")
+    adhoc_p.add_argument("--date", default=None, help="Entry date YYYY-MM-DD (default: today)")
+
     template_p = sub.add_parser("template", help="Create month tabs with week blocks")
     template_p.add_argument("--from", dest="start", default=None, help="Start month YYYY-MM (default: current month)")
     template_p.add_argument("--to", dest="end", default=None, help="End month YYYY-MM (default: December of start year)")
@@ -85,6 +91,21 @@ def main() -> None:
         )
         print(f"Logged into '{tab}': {args.task}")
         print(f"Sheet: {config['google'].get('sheet_url', '')}")
+    elif args.command == "adhoc":
+        entry_date = template.parse_date(args.date)
+        hours = round(args.mins / 60, 2)
+        tab = template.insert_entry(
+            spreadsheet,
+            entry_date,
+            task_tag="adhoc",
+            subtask="Ad-hoc",
+            priority="Low",
+            workplace=args.workplace,
+            timespent=hours,
+            notes=f"{args.text} ({args.mins}m)",
+            ascending=ascending,
+        )
+        print(f"Ad-hoc logged into '{tab}': {args.text} ({args.mins}m)")
     elif args.command == "template":
         today = date.today()
         start = _parse_year_month(args.start) if args.start else (today.year, today.month)

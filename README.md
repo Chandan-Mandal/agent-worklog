@@ -72,6 +72,10 @@ worklog add-next-month    # create next month's tab, archive (hide) the previous
 worklog sort              # ascending by date within each week block
 worklog sort --desc
 
+# Quick ad-hoc items — one roll-up row per day, items collect in NOTES
+worklog adhoc "sent mail to xyz" --mins 15
+worklog adhoc "approved deploy PR" --mins 10
+
 # Check configuration
 worklog status
 ```

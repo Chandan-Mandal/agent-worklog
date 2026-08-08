@@ -78,7 +78,7 @@ worklog status
 
 ## Sheet structure
 
-One tab per month (`AUG 2026`, `SEP 2026`, ...). Each tab:
+Everything lives in **one tab** (`Worklog`) — month sections stacked vertically, each made of week blocks:
 
 ```
 MONTH - AUG,2026                                TOTAL HRS  <auto-sum>
@@ -89,12 +89,15 @@ DATE | DAY | TASK_TAG | SUBTASK | PRIORITY | TIMELOG | TIMESPENT | ASSIGNED_AT |
 
 WEEK 2 (3-9)
 ...
+
+MONTH - SEP,2026
+...
 ```
 
 - Weeks are Monday–Sunday, clipped to the month
-- `worklog log` finds the right week block by date, fills the first empty row, and keeps the block sorted
-- **Priority**: High / Medium / Low (dropdown); month total hours auto-sums in the title row
-- When a month changes, `add-next-month` archives the previous tab (hidden, data preserved)
+- `worklog log` finds the right month section + week block by date, fills the first empty row, and keeps the block sorted
+- **Priority**: High / Medium / Low (dropdown); each month's TOTAL HRS auto-sums that month's entries
+- When a month changes, `add-next-month` moves the previous month's section to an `Archive` tab (values + formatting preserved)
 
 ## Using with Claude Code (or any AI CLI)
 

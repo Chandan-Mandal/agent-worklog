@@ -41,7 +41,7 @@ def main() -> None:
 
     sort_p = sub.add_parser("sort", help="Sort week blocks by date")
     sort_p.add_argument("--desc", action="store_true", help="Sort descending (default: ascending)")
-    sort_p.add_argument("--month", default=None, help="Month tab title, e.g. 'AUG 2026' (default: latest)")
+    sort_p.add_argument("--month", default=None, help="Limit to one month section, e.g. 'AUG 2026' (default: all)")
 
     sub.add_parser("status", help="Show current configuration")
 
@@ -95,16 +95,10 @@ def main() -> None:
         ascending = not args.desc
         config["sort_order"] = "asc" if ascending else "desc"
         config_store.save(config)
-        if args.month:
-            tab = args.month
-        else:
-            latest = template.latest_month_tab(spreadsheet)
-            if latest is None:
-                raise SystemExit("No month tabs found. Run: worklog template")
-            tab = latest[0].title
-        n = template.sort_month(spreadsheet, tab, ascending)
+        n = template.sort_blocks(spreadsheet, args.month, ascending)
         order = "ascending" if ascending else "descending"
-        print(f"Sorted {n} week blocks in '{tab}' ({order}). Default order saved: {order}.")
+        scope = f"in '{args.month}'" if args.month else "across all months"
+        print(f"Sorted {n} week blocks {scope} ({order}). Default order saved: {order}.")
 
 
 def _status() -> None:

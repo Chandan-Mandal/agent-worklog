@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "worklog-agent"
+version = "0.1.0"
+description = "A local agent that logs your daily work to Google Sheets and helps you share standup updates."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "gspread>=6.0.0",
+    "google-auth>=2.0.0",
+]
+
+[project.scripts]
+worklog = "worklog.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["worklog*"]

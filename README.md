@@ -84,7 +84,7 @@ Everything lives in **one tab** (`Worklog`) — month sections stacked verticall
 MONTH - AUG,2026                                TOTAL HRS  <auto-sum>
 
 WEEK 1 (1-2)
-DATE | DAY | TASK_TAG | SUBTASK | PRIORITY | TIMELOG | TIMESPENT | ASSIGNED_AT | ASSIGNED_BY
+DATE | DAY | TASK_TAG | SUBTASK | PRIORITY | WORKPLACE | TIMELOG | TIMESPENT | ASSIGNED_AT | ASSIGNED_BY | NOTES
 ...
 
 WEEK 2 (3-9)
@@ -96,7 +96,8 @@ MONTH - SEP,2026
 
 - Weeks are Monday–Sunday, clipped to the month
 - `worklog log` finds the right month section + week block by date, fills the first empty row, and keeps the block sorted
-- **Priority**: High / Medium / Low (dropdown); each month's TOTAL HRS auto-sums that month's entries
+- **Priority**: High / Medium / Low; **Workplace**: Home / Office / Leave (dropdowns); each month's TOTAL HRS auto-sums that month's entries
+- Logging the same task twice on one day merges TIMELOG ("1PM - 2PM, 5PM - 7PM") and adds up hours
 - When a month changes, `add-next-month` moves the previous month's section to an `Archive` tab (values + formatting preserved)
 
 ## Using with Claude Code (or any AI CLI)

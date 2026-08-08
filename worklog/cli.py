@@ -24,11 +24,13 @@ def main() -> None:
     log_p.add_argument("--task", required=True, help="What you worked on (SUBTASK)")
     log_p.add_argument("--tag", default="", help="TASK_TAG, e.g. project or epic name")
     log_p.add_argument("--priority", choices=["High", "Medium", "Low"], default="")
-    log_p.add_argument("--timelog", default="", help='Time range, e.g. "11AM - 12PM"')
-    log_p.add_argument("--hours", type=float, help="TIMESPENT in hours, e.g. 1.5")
+    log_p.add_argument("--workplace", choices=["Home", "Office", "Leave"], default="")
+    log_p.add_argument("--timelog", default="", help='Time range, e.g. "1PM - 2PM". Logging the same task+date again appends to it')
+    log_p.add_argument("--hours", type=float, help="TIMESPENT in hours, e.g. 1.5 (adds up when merging)")
     log_p.add_argument("--date", default=None, help="Entry date YYYY-MM-DD (default: today)")
     log_p.add_argument("--assigned-at", default="", help="Date the task was assigned, YYYY-MM-DD")
     log_p.add_argument("--assigned-by", default="", help="Who assigned it")
+    log_p.add_argument("--notes", default="")
 
     template_p = sub.add_parser("template", help="Create month tabs with week blocks")
     template_p.add_argument("--from", dest="start", default=None, help="Start month YYYY-MM (default: current month)")
@@ -73,10 +75,12 @@ def main() -> None:
             task_tag=args.tag,
             subtask=args.task,
             priority=args.priority,
+            workplace=args.workplace,
             timelog=args.timelog,
             timespent=args.hours,
             assigned_at=args.assigned_at,
             assigned_by=args.assigned_by,
+            notes=args.notes,
             ascending=ascending,
         )
         print(f"Logged into '{tab}': {args.task}")

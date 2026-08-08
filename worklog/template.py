@@ -65,13 +65,14 @@ DARK = {"red": 0.15, "green": 0.19, "blue": 0.28}
 ACCENT = {"red": 0.27, "green": 0.34, "blue": 0.47}
 WHITE = {"red": 1, "green": 1, "blue": 1}
 
-# Day-of-week row colors: aqua gradient, most intense on Monday fading to Friday
+# Day-of-week row colors: classic Excel/Sheets blue (Accent-1 tints),
+# most intense on Monday fading to Friday
 DAY_COLORS = {
-    "Mon": {"red": 0.36, "green": 0.72, "blue": 0.85},
-    "Tue": {"red": 0.49, "green": 0.78, "blue": 0.89},
-    "Wed": {"red": 0.62, "green": 0.84, "blue": 0.92},
-    "Thu": {"red": 0.75, "green": 0.89, "blue": 0.95},
-    "Fri": {"red": 0.87, "green": 0.94, "blue": 0.97},
+    "Mon": {"red": 0.557, "green": 0.667, "blue": 0.859},  # 8EAADB
+    "Tue": {"red": 0.631, "green": 0.722, "blue": 0.882},  # A1B8E1
+    "Wed": {"red": 0.706, "green": 0.776, "blue": 0.906},  # B4C6E7
+    "Thu": {"red": 0.780, "green": 0.831, "blue": 0.929},  # C7D4ED
+    "Fri": {"red": 0.851, "green": 0.886, "blue": 0.953},  # D9E2F3
 }
 WEEKEND_COLOR = {"red": 0.85, "green": 0.85, "blue": 0.85}
 LEAVE_COLOR = {"red": 1.0, "green": 0.9, "blue": 0.5}

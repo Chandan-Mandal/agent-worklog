@@ -26,7 +26,7 @@ worklog setup
 
 The wizard walks you through:
 
-1. **Google Sheets (required)** — provide a service account JSON key. The agent then *creates the base worklog sheet for you*: scorecard with total hours, frozen headers, alternating row colors, Priority/Workplace dropdowns, date pickers, number formats — and shares it with your Google account.
+1. **Google Sheets (required)** — provide a service account JSON key, create a blank sheet at [sheets.new](https://sheets.new) and share it with the service account (Google no longer lets service accounts own files). The agent then *initializes the base worklog tracker inside it*: scorecard with total hours, frozen headers, alternating row colors, Priority/Workplace dropdowns, date pickers, number formats.
 2. **Slack (optional)** — webhook/channel for your standup updates.
 3. **Jira (optional)** — credentials for future task sync.
 
@@ -40,7 +40,18 @@ Config is stored at `~/.worklog/config.json` (chmod 600). Keep your service acco
 4. Keys → Add key → JSON → download the file
 5. Point `worklog setup` at that file
 
-If you want to use an **existing** sheet instead of a generated one, share it with the service account's email (Editor) and give the setup wizard its spreadsheet ID.
+Prefer the terminal? With [gcloud](https://cloud.google.com/sdk) installed:
+
+```bash
+gcloud projects create worklog-agent-<something-unique>
+gcloud config set project worklog-agent-<something-unique>
+gcloud services enable sheets.googleapis.com drive.googleapis.com
+gcloud iam service-accounts create worklog-agent
+gcloud iam service-accounts keys create ~/.worklog/google-sa-key.json \
+    --iam-account=worklog-agent@worklog-agent-<something-unique>.iam.gserviceaccount.com
+```
+
+To use an **existing** sheet, share it with the service account's email (Editor) and paste its URL into the setup wizard — you can skip the tracker initialization to keep your current layout.
 
 ## Usage
 

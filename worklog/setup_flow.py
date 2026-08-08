@@ -80,10 +80,9 @@ def _setup_google(config: dict) -> None:
         print(f"  OK — authenticated as service account: {sa_email}")
         break
 
-    # 2. User email (for sharing the created sheet)
-    google["user_email"] = _ask("Your Google account email (sheet will be shared with it)", google.get("user_email", ""))
-
-    # 3. Sheet: create new or use existing
+    # 2. Sheet: connect and (optionally) initialize
+    # Note: Google no longer lets service accounts own Drive files, so the
+    # sheet must live in YOUR Drive and be shared with the service account.
     if google.get("sheet_id"):
         print(f"\nCurrently configured sheet: {google.get('sheet_url', google['sheet_id'])}")
         if not _ask_yes_no("Keep using this sheet?", default=True):
@@ -91,25 +90,36 @@ def _setup_google(config: dict) -> None:
             google.pop("sheet_url", None)
 
     if not google.get("sheet_id"):
-        if _ask_yes_no("\nCreate a new base worklog sheet for you?", default=True):
-            title = _ask("Sheet title", "Daily Work Tracker")
-            print("  Creating and formatting your tracker...")
-            spreadsheet = sheets.create_base_tracker(client, title, google["user_email"])
-            google["sheet_id"] = spreadsheet.id
-            google["sheet_url"] = spreadsheet.url
-            google["tab"] = sheets.TAB_NAME
-            print(f"  Done! Sheet shared with {google['user_email']}")
-            print(f"  URL: {spreadsheet.url}")
-        else:
-            print(f"\n  Note: share your existing sheet with the service account email\n  ({sa_email}) as Editor, otherwise writes will fail.")
-            google["sheet_id"] = _ask("Existing spreadsheet ID (from its URL)")
-            google["tab"] = _ask("Tab (worksheet) name", sheets.TAB_NAME)
+        print(
+            f"\n  Now connect a Google Sheet (2 clicks in your browser):\n"
+            f"    1. Create a sheet at https://sheets.new (or open an existing one)\n"
+            f"    2. Share it as Editor with:\n"
+            f"       {sa_email}\n"
+        )
+        while True:
+            raw = _ask("Paste the sheet URL (or just its spreadsheet ID)")
+            google["sheet_id"] = _extract_sheet_id(raw)
             try:
                 spreadsheet = sheets.open_sheet(client, google["sheet_id"])
                 google["sheet_url"] = spreadsheet.url
                 print(f"  OK — access verified: {spreadsheet.title}")
+                break
             except Exception as e:  # noqa: BLE001
-                print(f"  Warning: could not open the sheet ({e}). Check sharing and the ID.")
+                print(f"  Could not open the sheet ({e}).\n  Check that it is shared with {sa_email} and try again.")
+
+        if _ask_yes_no(f"Initialize a formatted '{sheets.TAB_NAME}' tracker tab in it?", default=True):
+            print("  Setting up scorecard, headers, dropdowns, and formatting...")
+            google["tab"] = sheets.init_tracker_tab(spreadsheet)
+            print(f"  Done! Tab '{google['tab']}' is ready.")
+        else:
+            google["tab"] = _ask("Which tab (worksheet) should entries go to?", sheets.TAB_NAME)
+
+
+def _extract_sheet_id(value: str) -> str:
+    """Accept a full Google Sheets URL or a bare spreadsheet ID."""
+    if "/spreadsheets/d/" in value:
+        return value.split("/spreadsheets/d/")[1].split("/")[0]
+    return value.strip()
 
 
 def _setup_slack(config: dict) -> None:

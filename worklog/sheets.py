@@ -41,14 +41,31 @@ def get_client(credentials_path: str) -> gspread.Client:
     return gspread.authorize(creds)
 
 
-def create_base_tracker(client: gspread.Client, title: str, share_with_email: str) -> gspread.Spreadsheet:
-    """Create the base Daily Work Tracker spreadsheet and share it with the user."""
-    spreadsheet = client.create(title)
-    ws = spreadsheet.sheet1
-    ws.update_title(TAB_NAME)
+def init_tracker_tab(spreadsheet: gspread.Spreadsheet) -> str:
+    """Initialize the formatted tracker layout in the spreadsheet.
+
+    Uses the TAB_NAME worksheet if it exists and is empty; otherwise creates a
+    fresh tab (TAB_NAME, TAB_NAME 2, ...) so existing data is never touched.
+    Returns the tab name used.
+
+    Note: service accounts cannot own Drive files (Google removed their storage
+    quota), so the spreadsheet itself must be created by the user and shared
+    with the service account.
+    """
+    existing = {ws.title for ws in spreadsheet.worksheets()}
+    name = TAB_NAME
+    counter = 2
+    while name in existing:
+        ws = spreadsheet.worksheet(name)
+        if not ws.get_all_values():  # empty tab — safe to use
+            break
+        name = f"{TAB_NAME} {counter}"
+        counter += 1
+    else:
+        ws = spreadsheet.add_worksheet(title=name, rows=1000, cols=len(HEADERS))
+
     _init_tracker_sheet(spreadsheet, ws)
-    spreadsheet.share(share_with_email, perm_type="user", role="writer", notify=True)
-    return spreadsheet
+    return name
 
 
 def open_sheet(client: gspread.Client, sheet_id: str) -> gspread.Spreadsheet:

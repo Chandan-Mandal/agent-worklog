@@ -1,10 +1,10 @@
-# worklog-agent
+# agent-worklog
 
 A local agent that logs your daily work into a Google Sheet tracker and helps you share standup updates (Slack/Geekbot) — designed to be driven from your terminal or from an AI CLI like Claude Code.
 
 ## Why
 
-Every day you have to tell your team what you did yesterday and what you plan to do today. worklog-agent gives you one place to capture that:
+Every day you have to tell your team what you did yesterday and what you plan to do today. agent-worklog gives you one place to capture that:
 
 - A professionally formatted **Daily Work Tracker** Google Sheet (created for you on setup)
 - A `worklog` CLI to append entries in seconds
@@ -14,7 +14,7 @@ Every day you have to tell your team what you did yesterday and what you plan to
 
 ```bash
 git clone <this-repo>
-cd worklog-agent
+cd agent-worklog
 pip install -e .
 ```
 
@@ -43,12 +43,12 @@ Config is stored at `~/.worklog/config.json` (chmod 600). Keep your service acco
 Prefer the terminal? With [gcloud](https://cloud.google.com/sdk) installed:
 
 ```bash
-gcloud projects create worklog-agent-<something-unique>
-gcloud config set project worklog-agent-<something-unique>
+gcloud projects create agent-worklog-<something-unique>
+gcloud config set project agent-worklog-<something-unique>
 gcloud services enable sheets.googleapis.com drive.googleapis.com
-gcloud iam service-accounts create worklog-agent
+gcloud iam service-accounts create agent-worklog
 gcloud iam service-accounts keys create ~/.worklog/google-sa-key.json \
-    --iam-account=worklog-agent@worklog-agent-<something-unique>.iam.gserviceaccount.com
+    --iam-account=agent-worklog@agent-worklog-<something-unique>.iam.gserviceaccount.com
 ```
 
 To use an **existing** sheet, share it with the service account's email (Editor) and paste its URL into the setup wizard — you can skip the tracker initialization to keep your current layout.

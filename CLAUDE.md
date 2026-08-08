@@ -1,4 +1,4 @@
-# worklog-agent
+# agent-worklog
 
 Local agent that logs daily work to a Google Sheet and (soon) posts standups to Slack/Geekbot.
 

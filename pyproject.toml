@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "worklog-agent"
+name = "agent-worklog"
 version = "0.1.0"
 description = "A local agent that logs your daily work to Google Sheets and helps you share standup updates."
 readme = "README.md"

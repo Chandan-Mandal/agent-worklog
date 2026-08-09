@@ -32,6 +32,7 @@ def main() -> None:
     log_p.add_argument("--assigned-at", default="", help="Date the task was assigned, YYYY-MM-DD")
     log_p.add_argument("--assigned-by", default="", help="Who assigned it")
     log_p.add_argument("--notes", default="")
+    log_p.add_argument("--jira", default="", help="Jira issue key or link, e.g. BDP-141")
 
     adhoc_p = sub.add_parser("adhoc", help="Log a small ad-hoc item into the day's single Ad-hoc roll-up row")
     adhoc_p.add_argument("text", help='What you did, e.g. "sent mail to xyz"')
@@ -94,6 +95,7 @@ def main() -> None:
             assigned_at=args.assigned_at,
             assigned_by=args.assigned_by,
             notes=args.notes,
+            jira=args.jira,
             ascending=ascending,
         )
         print(f"Logged into '{tab}': {args.task}")

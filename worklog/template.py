@@ -41,9 +41,10 @@ HEADERS = [
     "ASSIGNED_AT",
     "ASSIGNED_BY",
     "NOTES",
+    "JIRA",
 ]
 N_COLS = len(HEADERS)
-LAST_COL = "L"
+LAST_COL = "M"
 ROWS_PER_WEEK = 8
 PRIORITY_OPTIONS = ["High", "Medium", "Low"]
 WORKPLACE_OPTIONS = ["Home", "Office", "Leave"]
@@ -62,6 +63,7 @@ TYPE_OPTIONS = ["DEV", "DELIVERY", "OPS", "AD-HOC", "MEETING", "LEARNING"]
     COL_ASSIGNED_AT,
     COL_ASSIGNED_BY,
     COL_NOTES,
+    COL_JIRA,
 ) = range(N_COLS)
 
 DARK = {"red": 0.15, "green": 0.19, "blue": 0.28}
@@ -375,6 +377,7 @@ def _column_requests(sheet_id: int) -> list:
         width(COL_ASSIGNED_AT, 110),
         width(COL_ASSIGNED_BY, 120),
         width(COL_NOTES, 240),
+        width(COL_JIRA, 160),
     ]
 
 
@@ -464,6 +467,7 @@ def insert_entry(
     assigned_at: str = "",
     assigned_by: str = "",
     notes: str = "",
+    jira: str = "",
     ascending: bool = True,
 ) -> str:
     """Insert a row into the right month section + week block. Returns the section title.
@@ -506,6 +510,7 @@ def insert_entry(
             for col, value in [
                 (COL_TAG, task_tag), (COL_TYPE, work_type), (COL_PRIORITY, priority),
                 (COL_WORKPLACE, workplace), (COL_ASSIGNED_AT, assigned_at), (COL_ASSIGNED_BY, assigned_by),
+                (COL_JIRA, jira),
             ]:
                 if value and not str(merged[col]).strip():
                     merged[col] = value
@@ -544,6 +549,7 @@ def insert_entry(
         assigned_at,
         assigned_by,
         notes,
+        jira,
     ]]
     ws.update(values=values, range_name=f"A{row}:{LAST_COL}{row}", value_input_option="USER_ENTERED")
     _sort_block(spreadsheet, ws, block, ascending)

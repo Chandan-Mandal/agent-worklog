@@ -52,6 +52,11 @@ def main() -> None:
     sort_p.add_argument("--desc", action="store_true", help="Sort descending (default: ascending)")
     sort_p.add_argument("--month", default=None, help="Limit to one month section, e.g. 'AUG 2026' (default: all)")
 
+    jira_p = sub.add_parser("jira", help="Jira integration")
+    jira_sub = jira_p.add_subparsers(dest="jira_command")
+    sync_p = jira_sub.add_parser("sync", help="Sync your assigned issues into the Tasklog tab")
+    sync_p.add_argument("--jql", default=None, help="Custom JQL (default: open issues assigned to you)")
+
     sub.add_parser("status", help="Show current configuration")
 
     args = parser.parse_args()
@@ -119,6 +124,13 @@ def main() -> None:
         print(template.add_next_week(spreadsheet))
     elif args.command == "add-next-month":
         print(template.add_next_month(spreadsheet, archive_previous=not args.no_archive))
+    elif args.command == "jira":
+        from . import jira
+
+        if args.jira_command == "sync":
+            print(jira.sync(config, spreadsheet, jql=args.jql))
+        else:
+            print("Usage: worklog jira sync [--jql ...]")
     elif args.command == "sort":
         ascending = not args.desc
         config["sort_order"] = "asc" if ascending else "desc"

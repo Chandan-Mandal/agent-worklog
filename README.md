@@ -76,6 +76,10 @@ worklog sort --desc
 worklog adhoc "sent mail to xyz" --mins 15
 worklog adhoc "approved deploy PR" --mins 10
 
+# Jira: sync your open issues into a Tasklog tab (needs `worklog setup` Jira step)
+worklog jira sync
+worklog jira sync --jql "project = BDP AND status = 'In Progress'"
+
 # Check configuration
 worklog status
 ```
@@ -117,7 +121,6 @@ Clone the repo and open it in Claude Code. The codebase is small and prompt-frie
 
 - [ ] `worklog standup` — generate yesterday/today standup text from the sheet
 - [ ] Post standup to Slack / Geekbot automatically
-- [ ] Jira: pull assigned tickets, link entries to issues
 - [ ] Natural-language entry (`worklog log "built the setup wizard, 2h, high"`)
 
 ## License

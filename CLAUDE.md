@@ -7,6 +7,7 @@ Local agent that logs daily work to a Google Sheet and (soon) posts standups to 
 - `worklog/setup_flow.py` — interactive setup wizard (Google required, Slack/Jira optional)
 - `worklog/sheets.py` — gspread client helpers
 - `worklog/template.py` — single-tab template engine: month sections, week blocks, insert/sort/add-next-week/month/archive
+- `worklog/jira.py` — Jira Cloud sync: assigned issues upserted into "Tasklog" tab by KEY; use issue KEY as TASK_TAG in worklog entries to link them
 - `worklog/config.py` — config at `~/.worklog/config.json`
 
 ## Conventions

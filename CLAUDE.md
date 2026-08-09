@@ -10,7 +10,7 @@ Local agent that logs daily work to a Google Sheet and (soon) posts standups to 
 - `worklog/config.py` — config at `~/.worklog/config.json`
 
 ## Conventions
-- Sheet layout: single "Worklog" tab; month sections ("MONTH - AUG,2026") stacked vertically, each with week blocks (label row, header row, data rows); archive = move section to "Archive" tab
+- Sheet layout: single "Worklog" tab; month sections ("MONTH - AUG,2026") stacked vertically, each with full Mon-Sun week blocks labeled "WEEK 32 (3 Aug - 9 Aug)" (week-of-year numbering; week belongs to month of its Thursday); archive = move section to "Archive" tab
 - Columns: DATE, DAY, TASK_TAG, SUBTASK, TYPE (DEV/DELIVERY/OPS/AD-HOC/MEETING/LEARNING), PRIORITY, WORKPLACE, TIMELOG, TIMESPENT, ASSIGNED_AT, ASSIGNED_BY, NOTES
 - Same date+subtask logged again merges: TIMELOG appended, hours summed
 - TIMESPENT is a per-day total carried on the first row of each day group (_regroup_block); other rows of the day are blank

@@ -21,7 +21,7 @@ When the month changes, the previous month's section can be moved to an
 
 import calendar
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import gspread
 
@@ -81,7 +81,7 @@ WEEKEND_COLOR = {"red": 0.85, "green": 0.85, "blue": 0.85}
 LEAVE_COLOR = {"red": 1.0, "green": 0.9, "blue": 0.5}
 
 MONTH_LABEL_RE = re.compile(r"^MONTH - ([A-Z]{3}),(\d{4})$")
-WEEK_LABEL_RE = re.compile(r"^WEEK (\d+) \((\d+)-(\d+)\)$")
+WEEK_LABEL_RE = re.compile(r"^WEEK (\d+) \((\d{1,2}) ([A-Za-z]{3}) - (\d{1,2}) ([A-Za-z]{3})\)$")
 
 _MONTH_NUM = {calendar.month_abbr[i].upper(): i for i in range(1, 13)}
 
@@ -103,13 +103,28 @@ def parse_month_title(title: str):
 
 
 def weeks_of_month(year: int, month: int) -> list:
-    """Mon-Sun calendar weeks clipped to the month, as (first_day, last_day)."""
+    """Full Mon-Sun weeks belonging to the month, as (monday, sunday) dates.
+
+    A week belongs to the month containing its Thursday (ISO 8601 style), so
+    every week is complete and each week belongs to exactly one month.
+    """
+    first = date(year, month, 1)
+    monday = first - timedelta(days=first.weekday())
+    last_day = date(year, month, calendar.monthrange(year, month)[1])
     weeks = []
-    for week in calendar.Calendar().monthdayscalendar(year, month):
-        days = [d for d in week if d != 0]
-        if days:
-            weeks.append((days[0], days[-1]))
+    while True:
+        thursday = monday + timedelta(days=3)
+        if (thursday.year, thursday.month) == (year, month):
+            weeks.append((monday, monday + timedelta(days=6)))
+        elif thursday > last_day:
+            break
+        monday += timedelta(days=7)
     return weeks
+
+
+def week_label(monday: date, sunday: date) -> str:
+    week_no = monday.isocalendar()[1]
+    return f"WEEK {week_no} ({monday.day} {calendar.month_abbr[monday.month]} - {sunday.day} {calendar.month_abbr[sunday.month]})"
 
 
 def parse_date(value: str) -> date:
@@ -185,14 +200,22 @@ def parse_sections(ws: gspread.Worksheet):
         if w and sections:
             sections[-1]["blocks"].append({
                 "week": int(w.group(1)),
-                "start": int(w.group(2)),
-                "end": int(w.group(3)),
+                "_start_raw": (int(w.group(2)), w.group(3).capitalize()),
+                "_end_raw": (int(w.group(4)), w.group(5).capitalize()),
                 "label_row": idx,
             })
             markers.append(idx)
 
     for section in sections:
+        year, month = section["year"], section["month"]
         for block in section["blocks"]:
+            sd, sm_name = block.pop("_start_raw")
+            ed, em_name = block.pop("_end_raw")
+            sm, em = _MONTH_NUM[sm_name.upper()], _MONTH_NUM[em_name.upper()]
+            sy = year - 1 if (month == 1 and sm == 12) else year
+            ey = year + 1 if (month == 12 and em == 1) else year
+            block["start_date"] = date(sy, sm, sd)
+            block["end_date"] = date(ey, em, ed)
             block["data_start"] = block["label_row"] + 2
             next_marker = next((m for m in markers if m > block["label_row"]), None)
             if next_marker:
@@ -208,6 +231,15 @@ def latest_section(sections: list):
 
 def _find_section(sections: list, year: int, month: int):
     return next((s for s in sections if s["year"] == year and s["month"] == month), None)
+
+
+def _locate_block(sections: list, entry_date: date):
+    """Find the (section, block) whose week covers entry_date."""
+    for section in sections:
+        for block in section["blocks"]:
+            if block["start_date"] <= entry_date <= block["end_date"]:
+                return section, block
+    return None
 
 
 def _find_entry_row(all_values: list, block: dict, entry_date: date, subtask: str):
@@ -257,9 +289,11 @@ def append_month_section(spreadsheet: gspread.Spreadsheet, year: int, month: int
         [""] * N_COLS,
     ]
     label_offsets = []  # 0-based offsets within grid
-    for i, (a, b) in enumerate(weeks_of_month(year, month), 1):
+    week_numbers = []
+    for monday, sunday in weeks_of_month(year, month):
         label_offsets.append(len(grid))
-        grid.append([f"WEEK {i} ({a}-{b})"] + [""] * (N_COLS - 1))
+        week_numbers.append(monday.isocalendar()[1])
+        grid.append([week_label(monday, sunday)] + [""] * (N_COLS - 1))
         grid.append(list(HEADERS))
         grid.extend([[""] * N_COLS for _ in range(ROWS_PER_WEEK)])
         grid.append([""] * N_COLS)  # separator
@@ -270,10 +304,10 @@ def append_month_section(spreadsheet: gspread.Spreadsheet, year: int, month: int
     ws.update(values=grid, range_name=f"A{start}:{LAST_COL}{end}", value_input_option="USER_ENTERED")
 
     requests = [_month_title_format_request(ws.id, start - 1)]
-    for week, offset in enumerate(label_offsets, 1):
+    for week_no, offset in zip(week_numbers, label_offsets):
         label_row = start - 1 + offset  # 0-based
         requests.extend(_block_format_requests(ws.id, label_row, ROWS_PER_WEEK))
-        requests.append(_table_request(ws.id, table_name(year, month, week), label_row + 1, label_row + 2 + ROWS_PER_WEEK))
+        requests.append(_table_request(ws.id, table_name(year, month, week_no), label_row + 1, label_row + 2 + ROWS_PER_WEEK))
     spreadsheet.batch_update({"requests": requests})
     return month_title(year, month)
 
@@ -439,15 +473,16 @@ def insert_entry(
     """
     ws = get_tracker_ws(spreadsheet)
     sections, all_values = parse_sections(ws)
-    section = _find_section(sections, entry_date.year, entry_date.month)
-    if section is None:
-        append_month_section(spreadsheet, entry_date.year, entry_date.month)
+    located = _locate_block(sections, entry_date)
+    if located is None:
+        # the week belongs to the month containing its Thursday
+        thursday = entry_date - timedelta(days=entry_date.weekday()) + timedelta(days=3)
+        append_month_section(spreadsheet, thursday.year, thursday.month)
         sections, all_values = parse_sections(ws)
-        section = _find_section(sections, entry_date.year, entry_date.month)
-
-    block = next((b for b in section["blocks"] if b["start"] <= entry_date.day <= b["end"]), None)
-    if block is None:
-        raise SystemExit(f"No week block covers day {entry_date.day} in section '{month_title(entry_date.year, entry_date.month)}'.")
+        located = _locate_block(sections, entry_date)
+    if located is None:
+        raise SystemExit(f"No week block covers {entry_date.isoformat()}.")
+    section, block = located
 
     # Restore grouped fields (DATE/DAY/WORKPLACE) so matching and sorting see full rows
     _ungroup_block(ws, block, all_values)
@@ -478,7 +513,7 @@ def insert_entry(
                 merged[COL_NOTES] = f"{merged[COL_NOTES]}; {notes}" if str(merged[COL_NOTES]).strip() else notes
             ws.update(values=[merged[:N_COLS]], range_name=f"A{row}:{LAST_COL}{row}", value_input_option="USER_ENTERED")
             _regroup_block(ws, block)
-            return month_title(entry_date.year, entry_date.month)
+            return month_title(section["year"], section["month"])
 
     row = next(
         (r for r in range(block["data_start"], block["data_end"] + 1) if _row_is_empty(all_values, r)),
@@ -513,7 +548,7 @@ def insert_entry(
     ws.update(values=values, range_name=f"A{row}:{LAST_COL}{row}", value_input_option="USER_ENTERED")
     _sort_block(spreadsheet, ws, block, ascending)
     _regroup_block(ws, block)
-    return month_title(entry_date.year, entry_date.month)
+    return month_title(section["year"], section["month"])
 
 
 def sort_blocks(spreadsheet: gspread.Spreadsheet, month: str = None, ascending: bool = True) -> int:
@@ -641,18 +676,19 @@ def add_next_week(spreadsheet: gspread.Spreadsheet) -> str:
         return f"'{month_title(section['year'], section['month'])}' already has all {len(weeks)} weeks. Use: worklog add-next-month"
 
     i = len(section["blocks"]) + 1
-    a, b = weeks[i - 1]
+    monday, sunday = weeks[i - 1]
+    label = week_label(monday, sunday)
     start = section["blocks"][-1]["data_end"] + 2 if section["blocks"] else section["title_row"] + 2
-    grid = [[f"WEEK {i} ({a}-{b})"] + [""] * (N_COLS - 1), list(HEADERS)]
+    grid = [[label] + [""] * (N_COLS - 1), list(HEADERS)]
     grid.extend([[""] * N_COLS for _ in range(ROWS_PER_WEEK)])
     end = start + len(grid) - 1
     if end > ws.row_count:
         ws.add_rows(end - ws.row_count + 20)
     ws.update(values=grid, range_name=f"A{start}:{LAST_COL}{end}")
     requests = _block_format_requests(ws.id, start - 1, ROWS_PER_WEEK)
-    requests.append(_table_request(ws.id, table_name(section["year"], section["month"], i), start, start + 1 + ROWS_PER_WEEK))
+    requests.append(_table_request(ws.id, table_name(section["year"], section["month"], monday.isocalendar()[1]), start, start + 1 + ROWS_PER_WEEK))
     spreadsheet.batch_update({"requests": requests})
-    return f"Added WEEK {i} ({a}-{b}) to '{month_title(section['year'], section['month'])}'"
+    return f"Added {label} to '{month_title(section['year'], section['month'])}'"
 
 
 def add_next_month(spreadsheet: gspread.Spreadsheet, archive_previous: bool = True) -> str:

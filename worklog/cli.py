@@ -57,6 +57,7 @@ def main() -> None:
     jira_sub = jira_p.add_subparsers(dest="jira_command")
     sync_p = jira_sub.add_parser("sync", help="Sync your assigned issues into the Tasklog tab")
     sync_p.add_argument("--jql", default=None, help="Custom JQL (default: open issues assigned to you)")
+    sync_p.add_argument("--sheet-id", default=None, help="Sync into a different spreadsheet (e.g. a shared scrum sheet)")
 
     sub.add_parser("status", help="Show current configuration")
 
@@ -130,6 +131,9 @@ def main() -> None:
         from . import jira
 
         if args.jira_command == "sync":
+            if args.sheet_id:
+                client = sheets.get_client(config["google"]["credentials_path"])
+                spreadsheet = sheets.open_sheet(client, args.sheet_id)
             print(jira.sync(config, spreadsheet, jql=args.jql))
         else:
             print("Usage: worklog jira sync [--jql ...]")

@@ -139,6 +139,8 @@ def sync(config: dict, spreadsheet, jql: str = None) -> str:
             updates.append({"range": f"A{row}:{LAST_COL}{row}", "values": [_issue_row(issue, base)]})
             closed += 1
 
+    if next_free - 1 > ws.row_count:
+        ws.add_rows(next_free - 1 - ws.row_count + 50)
     if updates:
         ws.batch_update(updates, value_input_option="USER_ENTERED")
     parts = f"{added} new, {updated} refreshed"

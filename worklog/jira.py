@@ -126,6 +126,22 @@ def sync(config: dict, spreadsheet, jql: str = None) -> str:
             updates.append({"range": f"A{next_free}:{LAST_COL}{next_free}", "values": [row_values]})
             next_free += 1
             added += 1
+
+    # Rows in the sheet whose tickets dropped out of the query (e.g. moved to
+    # Done) would otherwise freeze at their last-known status — refresh them too.
+    fetched = {issue["key"] for issue in issues}
+    leftovers = [k for k in row_by_key if k not in fetched]
+    closed = 0
+    for i in range(0, len(leftovers), 50):
+        chunk = leftovers[i:i + 50]
+        for issue in fetch_issues(config, jql=f"key in ({','.join(chunk)})"):
+            row = row_by_key[issue["key"]]
+            updates.append({"range": f"A{row}:{LAST_COL}{row}", "values": [_issue_row(issue, base)]})
+            closed += 1
+
     if updates:
         ws.batch_update(updates, value_input_option="USER_ENTERED")
-    return f"Synced {len(issues)} issues into '{TASKLOG_TAB}' ({added} new, {updated} refreshed)"
+    parts = f"{added} new, {updated} refreshed"
+    if closed:
+        parts += f", {closed} closed/out-of-scope refreshed"
+    return f"Synced {len(issues) + closed} issues into '{TASKLOG_TAB}' ({parts})"

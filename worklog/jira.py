@@ -7,9 +7,9 @@ from . import template
 TASKLOG_TAB = "Tasklog"
 DEFAULT_JQL = "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC"
 
-HEADERS = ["KEY", "SUMMARY", "STATUS", "PRIORITY", "TYPE", "PROJECT", "REPORTER", "CREATED", "DUE", "UPDATED", "LINK"]
+HEADERS = ["KEY", "SUMMARY", "STATUS", "PRIORITY", "TYPE", "PROJECT", "ASSIGNEE", "REPORTER", "CREATED", "DUE", "UPDATED", "LINK"]
 N_COLS = len(HEADERS)
-LAST_COL = "K"
+LAST_COL = "L"
 
 DARK = {"red": 0.15, "green": 0.19, "blue": 0.28}
 WHITE = {"red": 1, "green": 1, "blue": 1}
@@ -30,7 +30,7 @@ def fetch_issues(config: dict, jql: str = None) -> list:
         params = {
             "jql": jql,
             "maxResults": 100,
-            "fields": "summary,status,priority,issuetype,project,reporter,created,duedate,updated",
+            "fields": "summary,status,priority,issuetype,project,assignee,reporter,created,duedate,updated",
         }
         if next_token:
             params["nextPageToken"] = next_token
@@ -62,6 +62,7 @@ def _issue_row(issue: dict, base: str) -> list:
         get("priority", "name"),
         get("issuetype", "name"),
         get("project", "name"),
+        get("assignee", "displayName"),
         get("reporter", "displayName"),
         (f.get("created") or "")[:10],
         f.get("duedate") or "",
